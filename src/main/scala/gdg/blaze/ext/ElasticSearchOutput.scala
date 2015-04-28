@@ -32,7 +32,7 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
 
   val port = config.getInt("port").getOrElse(defaultPort(protocol))
   val timer = Stopwatch.createUnstarted()
-  var tc: TransportClient
+  var tc: TransportClient = null
 
   override def start: Unit = {
     if(!host.isDefined) {
