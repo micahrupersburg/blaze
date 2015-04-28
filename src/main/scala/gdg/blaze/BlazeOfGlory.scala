@@ -8,11 +8,11 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 import scala.io.Source
 
 object BlazeOfGlory {
-  def filterPlugins: List[PluginFactory[_ <: FilterPlugin]] = List(GrokFilter)
+  def filterPlugins: Seq[PluginFactory[_ <: FilterPlugin]] = Seq(GrokFilter)
 
-  def inputPlugins: List[PluginFactory[_ <: InputPlugin]] = List(HdfsInput)
+  def inputPlugins: Seq[PluginFactory[_ <: InputPlugin]] = Seq(HdfsInput)
 
-  def outputPlugins: List[PluginFactory[_ <: OutputPlugin]] = List(StdOut)
+  def outputPlugins: Seq[PluginFactory[_ <: OutputPlugin]] = Seq(StdOut)
 
   val inputMap: Map[String, PluginFactory[_ <: InputPlugin]] = inputPlugins.map { p =>
     (p.name, p)
@@ -21,7 +21,7 @@ object BlazeOfGlory {
     (p.name, p)
   }.toMap
 
-  def exec(inputs: List[InputPlugin], filters: List[FilterPlugin], outputs: List[OutputPlugin]): StreamingContext = {
+  def exec(inputs: Seq[InputPlugin], filters: Seq[FilterPlugin], outputs: Seq[OutputPlugin]): StreamingContext = {
     val conf: SparkConf = new SparkConf().setAppName("Hadoop DB TX Loader").setMaster("local[4]")
     val ssc = new StreamingContext(conf, Seconds(1))
     val fdd = inputs.map(_.create(ssc))
@@ -50,31 +50,24 @@ object BlazeOfGlory {
     val config: ConfigParser#ParseResult[EntireConfig] = new ConfigParser().config(exp)
     println(config)
 
-    exec(config.get.input.flatMap(inputPlugin), List.empty, config.get.output.flatMap(outputPlugin))
+    exec(config.get.input.flatMap(inputPlugin), Seq.empty, config.get.output.flatMap(outputPlugin))
   }
 
-  def inputPlugin(b: Body): Traversable[InputPlugin] = {
-    b match {
-      case b: NamedObjectValue if inputMap.contains(b.name) => Some(inputMap.get(b.name).get.create(new PluginConfig(b.members)))
-      case b: NamedObjectValue if !inputMap.contains(b.name) => throw new IllegalArgumentException(s"No such input type : ${b.name}")
-      case _ => throw new IllegalArgumentException("Conditionals not supported in input block")
-    }
+  def inputPlugin: Body => Traversable[InputPlugin] = {
+    case b: NamedObjectValue if inputMap.contains(b.name) => inputMap.get(b.name).map(_.create(new PluginConfig(b.members)))
+    case b: NamedObjectValue if !inputMap.contains(b.name) => throw new IllegalArgumentException(s"No such input type : ${b.name}")
+    case _ => throw new IllegalArgumentException("Conditionals not supported in input block")
   }
 
-  def outputPlugin(body: Body): Traversable[OutputPlugin] = {
-    body match {
-      case b: NamedObjectValue if outputMap.contains(b.name) => Some(outputMap.get(b.name).get.create(new PluginConfig(b.members)))
-      case b: NamedObjectValue if !outputMap.contains(b.name) => throw new IllegalArgumentException(s"No such output type : ${b.name}")
-      //      case ic: IfCond => ic.body.flatMap(outputPlugin).map(new FilteredOutputPlugin(_, ))
-      case _ => throw new IllegalArgumentException("Conditionals Not Yet Supported")
-    }
+  def outputPlugin: Body => Traversable[OutputPlugin] = {
+    case b: NamedObjectValue if outputMap.contains(b.name) => outputMap.get(b.name).map(_.create(new PluginConfig(b.members)))
+    case b: NamedObjectValue if !outputMap.contains(b.name) => throw new IllegalArgumentException(s"No such output type : ${b.name}")
+    //      case ic: IfCond => ic.body.flatMap(outputPlugin).map(new FilteredOutputPlugin(_, ))
+    case _ => throw new IllegalArgumentException("Conditionals Not Yet Supported")
   }
 
-  def pred(conditional: Conditional): (Message) => Boolean = {
-    conditional match {
-      case c => message => true
-    }
+  def pred: Conditional => Message => Boolean = {
+    case c => message => true
   }
-
 }
 

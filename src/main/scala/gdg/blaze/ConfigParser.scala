@@ -12,14 +12,15 @@ class ConfigParser extends JavaTokenParsers {
 
   def config(expression: String) = parseAll(top, expression)
 
-  def input: Parser[List[Body]] = "input" ~> block
+  def input: Parser[Seq[Body]] = "input" ~> block
 
-  def filter: Parser[List[Body]] = "filter" ~> block
+  def filter: Parser[Seq[Body]] = "filter" ~> block
 
-  def output: Parser[List[Body]] = "output" ~> block
+  def output: Parser[Seq[Body]] = "output" ~> block
 
   def top: Parser[EntireConfig] = opt(input) ~ opt(filter) ~ opt(output) ^^ {
-    case i ~ f ~ o => new EntireConfig(i.getOrElse(List.empty), f.getOrElse(List.empty), o.getOrElse(List.empty))
+    case i ~ f ~ o =>
+      new EntireConfig(i.getOrElse(Seq.empty), f.getOrElse(Seq.empty), o.getOrElse(Seq.empty))
   }
 
   def booleanLiteral: Parser[Boolean] = ("true" | "false") ^^ (_.toBoolean)
@@ -34,15 +35,15 @@ class ConfigParser extends JavaTokenParsers {
 
   val member: Parser[Member] = (ident | str) ~ "=>" ~ value ^^ { case l ~ "=>" ~ r => new Member(l, r) }
 
-  def namedObj: Parser[NamedObjectValue] = ident ~ opt(obj) ^^ { case l ~ r => new NamedObjectValue(l, r.getOrElse(new ObjectValue(List[Member]())).value) }
+  def namedObj: Parser[NamedObjectValue] = ident ~ opt(obj) ^^ { case l ~ r => new NamedObjectValue(l, r.getOrElse(new ObjectValue(Seq[Member]())).value) }
 
   def obj: Parser[ObjectValue] = "{" ~> rep(member) <~ "}" ^^ (new ObjectValue(_))
 
   def arr: Parser[ArrayValue] = "[" ~> repsep(value, ",") <~ "]" ^^ (new ArrayValue(_))
 
-  def path: Parser[Path] = ((ident ^^ (List(_))) | rep1("[" ~> ident <~ "]")) ^^ (new Path(_))
+  def path: Parser[Path] = ((ident ^^ (Seq(_))) | rep1("[" ~> ident <~ "]")) ^^ (new Path(_))
 
-  def block: Parser[List[Body]] = "{" ~> rep(ifOrOb) <~ "}"
+  def block: Parser[Seq[Body]] = "{" ~> rep(ifOrOb) <~ "}"
 
 
   def ifClause: Parser[IfCond] = "if" ~> cond ~ block ~ rep(elseIfClause) ~ opt(elseClause) ^^ {
@@ -98,20 +99,19 @@ class ConfigParser extends JavaTokenParsers {
   }
 
   def compound: Parser[Condition] = (singleCondition ~ opt(boolopt ~ cond)) ^^ {
-    case l ~ r if r.isEmpty => l
-    case l ~ r =>
-      new CompoundCondition(l, new PredicateCondition(r.get._1, r.get._2))
+    case l ~ None => l
+    case l ~ Some((r1, r2)) =>
+      new CompoundCondition(l, new PredicateCondition(r1, r2))
   }
 
   def cond: Parser[Condition] = (opt("!") ~ ("(" ~> compound <~ ")" | compound)) ^^ {
-    case l ~ r if l.isEmpty => r
-    case l ~ r => new NegativeCondition(r)
+    case None ~ r => r
+    case Some(_) ~ r => new NegativeCondition(r)
   }
 
   def str: Parser[String] =   ("\""+"""([^"\p{Cntrl}\\]|\\([\\'"bfnrt]?)|\\u[a-fA-F0-9]{4})*"""+"\"").r ^^ { x=>
     StringEscapeUtils.escapeJava(x.substring(1, x.length-1))
   }
-
 }
 
 sealed trait PathOrSingle extends PathOrValue
@@ -123,9 +123,7 @@ sealed trait Value extends PathOrValue
 sealed trait Singular extends Value with PathOrSingle
 
 case class InterpolatedString(value:String) extends Singular {
-  val index = Map[String, String] = {
-
-  }
+  val index: Map[String, String] = ???
 }
 case class SingleString(value: String) extends Singular
 
@@ -133,12 +131,12 @@ case class SingleFloat(value: Double) extends Singular
 
 case class SingleBool(value: Boolean) extends Singular
 
-case class ArrayValue(value: List[Value]) extends Value
+case class ArrayValue(value: Seq[Value]) extends Value
 
-case class ObjectValue(value: List[Member]) extends Value
+case class ObjectValue(value: Seq[Member]) extends Value
 
-case class NamedObjectValue(name: String, value: List[Member]) extends Value with Body {
-  def members :  Map[String, Value] = value.map { x=>
+case class NamedObjectValue(name: String, value: Seq[Member]) extends Value with Body {
+  def members: Map[String, Value] = value.map { x=>
     (x.key, x.value)
   }.toMap
 }
@@ -146,7 +144,7 @@ case class NamedObjectValue(name: String, value: List[Member]) extends Value wit
 
 case class Member(key: String, value: Value)
 
-case class Path(value: List[String]) extends PathOrSingle
+case class Path(value: Seq[String]) extends PathOrSingle
 
 sealed trait ReVal
 
@@ -202,12 +200,12 @@ sealed trait Body
 
 sealed trait Conditional extends Body
 
-case class Else(body: List[Body]) extends Conditional
+case class Else(body: Seq[Body]) extends Conditional
 
-case class IfCond(condition: Condition, body: List[Body], elseIf:List[Conditional]) extends Conditional
+case class IfCond(condition: Condition, body: Seq[Body], elseIf: Seq[Conditional]) extends Conditional
 
 case class BooleanPath(path:Path) extends Condition
 
-class EntireConfig(val input: List[Body], val filter: List[Body], val output: List[Body]) {
+class EntireConfig(val input: Seq[Body], val filter: Seq[Body], val output: Seq[Body]) {
 
 }

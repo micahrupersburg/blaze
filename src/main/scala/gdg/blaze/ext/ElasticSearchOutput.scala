@@ -25,7 +25,7 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
   val index_type = config.getInterString("index_type")
 
   //  val cluster = config.getString("cluster")
-  def defaultPort(protocol: String): Int = {
+  def defaultPort: String => Int = {
     case "transport" => 9300
     case "http" => 9200
   }
@@ -48,7 +48,7 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
 
   }
   var bulk: Option[BulkRequestBuilder] = None
-  def sendBulkIfNecessary = {
+  def sendBulkIfNecessary() = {
     if(bulk.isDefined && timer.elapsed(TimeUnit.SECONDS) > idle_flush_time) {
       timer.reset().start()
       val bulkItemResponses: BulkResponse = bulk.get.execute().actionGet(60, TimeUnit.SECONDS)
@@ -61,12 +61,12 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
   override def process(dStream: DStream[Message]): Unit = {
 
     dStream.foreachRDD { rdd =>
-      sendBulkIfNecessary
+      sendBulkIfNecessary()
     }
 
   }
 
-  private[search] def createClient(): TransportClient = {
+  private[blaze] def createClient(): TransportClient = {
     val settings = ImmutableSettings.builder
       .put("client.transport.sniff", "false")
       .put("client.transport.ignore_cluster_name", "true")

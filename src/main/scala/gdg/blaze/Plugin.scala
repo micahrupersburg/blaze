@@ -59,7 +59,9 @@ trait PluginFactory[T <: Plugin] {
 }
 
 class PluginConfig(val config: Map[String, Value]) extends Serializable {
-  def getInt(name: String): Option[Int] = getNum(name).map(_.toInt)
+  def getInt(name: String): Option[Int] = {
+    getNum(name).map(_.toInt)
+  }
 
   def getNum(name: String): Option[Double] = {
     config.get(name).map {
@@ -76,16 +78,9 @@ class PluginConfig(val config: Map[String, Value]) extends Serializable {
   }
 
   def getInterString(name: String): Message => Option[String] = {
-    val x: Option[Value] = config.get(name)
-    if(x.isEmpty) {
-      (m: Message) => None
-    } else {
-      x.get match {
-        case x: SingleString => (m: Message) => {
-          Some(x.value)
-        }
-        case _ => throw new IllegalStateException()
-      }
+    config.get(name).map {
+      case x: SingleString => _: Message => Some(x.value)
+      case _ => throw new IllegalStateException()
     }
   }
 
@@ -99,7 +94,6 @@ class PluginConfig(val config: Map[String, Value]) extends Serializable {
 }
 
 class FilteredOutputPlugin(other: OutputPlugin, predicate: (Message) => Boolean) extends OutputPlugin {
-
   override def process(dStream: DStream[Message]): Unit = {
     other.process(dStream.filter(predicate))
   }
