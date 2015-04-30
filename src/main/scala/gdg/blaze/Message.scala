@@ -2,15 +2,21 @@ package gdg.blaze
 
 import java.util.UUID
 
-class Message(
-               var tags: Set[String] = Set.empty,
-               var data: Map[String, _] = Map.empty,
-               var ts: Long = System.currentTimeMillis(),
-               val uuid: UUID = UUID.randomUUID()
+class Message(var fields: Map[String, _] = Map.empty,
+              var message:String = null,
+              var source: String = "unknown",
+              var typeParam: String = "unknown",
+              var tags: Set[String] = Set.empty,
+              var timestamp: Long = System.currentTimeMillis(),
+              val uuid: UUID = UUID.randomUUID()
                ) extends Serializable {
   def addTags(tags: Set[String]) = {
     this.tags = this.tags ++ tags
   }
 
-  def getString(name: String): Option[String] = data.get(name).map(_.asInstanceOf[String])
+  def getString(name: String): Option[String] = get(name).map(_.asInstanceOf[String])
+
+  def get(name: String): Option[Any] = fields.get(name)
+
+  override def toString = s"Message($fields, $message, $source, $typeParam, $tags, $timestamp, $uuid)"
 }

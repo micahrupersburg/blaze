@@ -1,10 +1,9 @@
-package gdg.blaze.ext
+package gdg.blaze.ext.es
 
 import java.util.concurrent.TimeUnit
 
 import com.google.common.base.Stopwatch
 import gdg.blaze._
-import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 import org.elasticsearch.action.bulk.{BulkRequestBuilder, BulkResponse}
 import org.elasticsearch.client.transport.TransportClient

@@ -1,8 +1,6 @@
 package gdg.blaze.ext
 
 import gdg.blaze._
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
 
 
 class GrokFilter(config: PluginConfig, bc:BlazeContext) extends BasicFilter(config, bc) {

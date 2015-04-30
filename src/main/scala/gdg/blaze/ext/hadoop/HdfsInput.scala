@@ -1,16 +1,11 @@
-package gdg.blaze.ext
+package gdg.blaze.ext.hadoop
 
 import gdg.blaze._
 import gdg.blaze.codec.JSONCodec
-import org.apache.hadoop.io.{Text, LongWritable}
+import org.apache.hadoop.io.{LongWritable, Text}
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
-import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
+import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 
-import scala.collection.mutable
 
 /* add_field => ... # hash (optional), default: {}
     codec => ... # codec (optional), default: "plain"
@@ -34,15 +29,17 @@ class HdfsInput(config: PluginConfig, bc: BlazeContext) extends Input {
       throw new IllegalStateException("hdfs plugin requires path field")
     }
     val codec = config.getCodec("codec")(bc).getOrElse(new JSONCodec())
-    val newFiles = config.getBool("new_files_only").getOrElse(true)
+    val newFiles = config.getBool("new_files_only").getOrElse(false)
     val mstream = format match {
-      case "text" =>text("xyz", false)
+      case "text" =>text(path.get, newFiles = false)
     }
-    mstream.flatMap { str => new JSONCodec().apply(str)}
+    mstream.flatMap { str => codec.decode(str)}
   }
 
-  def text(path: String, newFiles: Boolean): DStream[Message] = {
-    bc.sc.fileStream[LongWritable, Text, TextInputFormat](path, Function.const(true) _, newFiles).map(_._2.toString).map(x => new Message(data = Map("message" -> x)))
+  def text(path: String, newFiles: Boolean): DStream[String] = {
+    val stream: InputDStream[(LongWritable, Text)] = bc.sc.fileStream[LongWritable, Text, TextInputFormat](path, Function.const(true) _, newFiles)
+    stream.print()
+    stream.map(_._2.toString)
   }
 }
 
