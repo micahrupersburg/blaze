@@ -1,13 +1,16 @@
 package gdg.blaze.ext
 
-import gdg.blaze.{BaseFilter, PluginConfig, BasePlugin, PluginFactory}
+import gdg.blaze._
+import org.apache.spark.streaming.StreamingContext
+import org.apache.spark.streaming.dstream.DStream
 
 
-class GrokFilter(config: PluginConfig) extends BaseFilter(config) {
-
+class GrokFilter(config: PluginConfig, bc:BlazeContext) extends BasicFilter(config, bc) {
+  override def transform(msg: Message): Traversable[Message] = {
+    None
+  }
 }
 
 object GrokFilter extends PluginFactory[GrokFilter] {
-  override def name = "grok"
-  override def create(config: PluginConfig) = new GrokFilter(config)
+  override def apply(config: PluginConfig, bc:BlazeContext) = new GrokFilter(config, bc)
 }

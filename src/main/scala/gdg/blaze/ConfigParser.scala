@@ -1,10 +1,8 @@
 package gdg.blaze
 
 import org.apache.commons.lang3.StringEscapeUtils
-import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation.SingleValue
 
-import scala.io.Source
-import scala.util.parsing.combinator.{RegexParsers, JavaTokenParsers}
+import scala.util.parsing.combinator.{JavaTokenParsers}
 
 
 class ConfigParser extends JavaTokenParsers {
@@ -17,10 +15,11 @@ class ConfigParser extends JavaTokenParsers {
   def filter: Parser[Seq[Body]] = "filter" ~> block
 
   def output: Parser[Seq[Body]] = "output" ~> block
+  def config: Parser[Seq[Member]] = "config" ~> rep(member)
 
-  def top: Parser[EntireConfig] = opt(input) ~ opt(filter) ~ opt(output) ^^ {
-    case i ~ f ~ o =>
-      new EntireConfig(i.getOrElse(Seq.empty), f.getOrElse(Seq.empty), o.getOrElse(Seq.empty))
+  def top: Parser[EntireConfig] = opt(config) ~ opt(input) ~ opt(filter) ~ opt(output) ^^ {
+    case c ~ i ~ f ~ o =>
+      new EntireConfig(c.getOrElse(None), i.getOrElse(None), f.getOrElse(None), o.getOrElse(None))
   }
 
   def booleanLiteral: Parser[Boolean] = ("true" | "false") ^^ (_.toBoolean)
@@ -100,7 +99,7 @@ class ConfigParser extends JavaTokenParsers {
 
   def compound: Parser[Condition] = (singleCondition ~ opt(boolopt ~ cond)) ^^ {
     case l ~ None => l
-    case l ~ Some((r1, r2)) =>
+    case l ~ Some((r1 ~ r2)) =>
       new CompoundCondition(l, new PredicateCondition(r1, r2))
   }
 
@@ -122,9 +121,6 @@ sealed trait Value extends PathOrValue
 
 sealed trait Singular extends Value with PathOrSingle
 
-case class InterpolatedString(value:String) extends Singular {
-  val index: Map[String, String] = ???
-}
 case class SingleString(value: String) extends Singular
 
 case class SingleFloat(value: Double) extends Singular
@@ -135,12 +131,7 @@ case class ArrayValue(value: Seq[Value]) extends Value
 
 case class ObjectValue(value: Seq[Member]) extends Value
 
-case class NamedObjectValue(name: String, value: Seq[Member]) extends Value with Body {
-  def members: Map[String, Value] = value.map { x=>
-    (x.key, x.value)
-  }.toMap
-}
-
+case class NamedObjectValue(name: String, value: Seq[Member] = Seq()) extends Value with Body
 
 case class Member(key: String, value: Value)
 
@@ -206,6 +197,4 @@ case class IfCond(condition: Condition, body: Seq[Body], elseIf: Seq[Conditional
 
 case class BooleanPath(path:Path) extends Condition
 
-class EntireConfig(val input: Seq[Body], val filter: Seq[Body], val output: Seq[Body]) {
-
-}
+class EntireConfig(val config:Traversable[Member], val input: Traversable[Body], val filter: Traversable[Body], val output: Traversable[Body])

@@ -22,34 +22,30 @@ import scala.collection.mutable
     start_position => ... # string, one of ["beginning", "end"] (optional), default: "end"
     stat_interval => ... # number (optional), default: 1
     tags => ... # array (optional)
-    type => ... # string (optional)*/
-/*
+    type => ... # string (optional)
   format = (text, or binary, etc)
  */
-class HdfsInput(config: PluginConfig) extends BaseInput(config) {
+class HdfsInput(config: PluginConfig, bc: BlazeContext) extends Input {
 
-  def filter(path: org.apache.hadoop.fs.Path) : Boolean = true
-  override def stream(sc: StreamingContext): DStream[Message] = {
+  override def apply(): DStream[Message] = {
     val format = config.getString("format").getOrElse("text")
     val path = config.getString("path")
     if(path.isEmpty) {
       throw new IllegalStateException("hdfs plugin requires path field")
     }
-    val codec = config.getString("codec").getOrElse("json")
+    val codec = config.getCodec("codec")(bc).getOrElse(new JSONCodec())
     val newFiles = config.getBool("new_files_only").getOrElse(true)
-    format match {
-      case "text" => sc.fileStream[LongWritable, Text, TextInputFormat](path.get, filter, newFiles).map(_._2.toString).flatMap(stringCodec(codec).transform)
+    val mstream = format match {
+      case "text" =>text("xyz", false)
     }
+    mstream.flatMap { str => new JSONCodec().apply(str)}
   }
 
-  def stringCodec(name: String): StringCodec = {
-    name match {
-      case "json" => new JSONCodec()
-    }
+  def text(path: String, newFiles: Boolean): DStream[Message] = {
+    bc.sc.fileStream[LongWritable, Text, TextInputFormat](path, Function.const(true) _, newFiles).map(_._2.toString).map(x => new Message(data = Map("message" -> x)))
   }
 }
 
 object HdfsInput extends PluginFactory[HdfsInput] {
-  override def name = "hdfs"
-  override def create(config: PluginConfig) = new HdfsInput(config)
+  override def apply(config: PluginConfig, sc: BlazeContext) = new HdfsInput(config, sc)
 }

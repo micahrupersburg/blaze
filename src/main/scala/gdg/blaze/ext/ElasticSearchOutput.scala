@@ -3,15 +3,15 @@ package gdg.blaze.ext
 import java.util.concurrent.TimeUnit
 
 import com.google.common.base.Stopwatch
-import gdg.blaze.{PluginConfig, Message, BaseOutput}
+import gdg.blaze._
+import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
-import org.elasticsearch.action.ListenableActionFuture
-import org.elasticsearch.action.bulk.{BulkResponse, BulkRequestBuilder, BulkRequest}
+import org.elasticsearch.action.bulk.{BulkRequestBuilder, BulkResponse}
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.ImmutableSettings
-import org.elasticsearch.common.transport.{InetSocketTransportAddress, TransportAddress}
+import org.elasticsearch.common.transport.InetSocketTransportAddress
 
-class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
+class ElasticSearchOutput(config: PluginConfig) extends Output {
   val action = config.getString("action").getOrElse("index")
   //  val bind_host = config.getString("bind_host")
   //  val bind_port  = config.getString("bind_port")
@@ -34,20 +34,12 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
   val timer = Stopwatch.createUnstarted()
   var tc: TransportClient = null
 
-  override def start: Unit = {
-    if(!host.isDefined) {
-      throw new IllegalStateException("Undefined Config Parameter : host")
-    }
-    tc = createClient()
-  }
-
-  override def stop: Unit = {
-    tc.close()
-  }
   class BulkSender {
 
   }
+
   var bulk: Option[BulkRequestBuilder] = None
+
   def sendBulkIfNecessary() = {
     if(bulk.isDefined && timer.elapsed(TimeUnit.SECONDS) > idle_flush_time) {
       timer.reset().start()
@@ -58,8 +50,8 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
       }
     }
   }
-  override def process(dStream: DStream[Message]): Unit = {
 
+   def process(dStream: DStream[Message]): Unit = {
     dStream.foreachRDD { rdd =>
       sendBulkIfNecessary()
     }
@@ -79,4 +71,11 @@ class ElasticSearchOutput(config: PluginConfig) extends BaseOutput(config) {
     tc
   }
 
+  override def apply(v1: DStream[Message]): Unit = ???
 }
+
+object ElasticSearchOutput extends PluginFactory[ElasticSearchOutput] {
+  override def apply(config: PluginConfig, sc: BlazeContext): ElasticSearchOutput = ???
+
+}
+
