@@ -13,7 +13,7 @@ class Message(var fields: Map[String, _] = Map.empty,
   def addTags(tags: Set[String]) = {
     this.tags = this.tags ++ tags
   }
-
+  def set(name:String, value:Any) = {this.fields = fields++ Map(name -> value)}
   def getString(name: String): Option[String] = get(name).map(_.asInstanceOf[String])
 
   def get(name: String): Option[Any] = fields.get(name)

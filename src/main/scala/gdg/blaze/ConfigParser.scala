@@ -8,7 +8,9 @@ import scala.util.parsing.combinator.{JavaTokenParsers}
 class ConfigParser extends JavaTokenParsers {
   //  override protected val whiteSpace = """(\s|#.*?\n)+""".r
 
-  def config(expression: String) = parseAll(top, expression)
+  def config(expression: String) = {
+    parseAll(top, expression.replaceAll("#.*\n", "\n"))
+  }
 
   def input: Parser[Seq[Body]] = "input" ~> block
 
@@ -36,7 +38,8 @@ class ConfigParser extends JavaTokenParsers {
 
   def namedObj: Parser[NamedObjectValue] = ident ~ opt(obj) ^^ { case l ~ r => new NamedObjectValue(l, r.getOrElse(new ObjectValue(Seq[Member]())).value) }
 
-  def obj: Parser[ObjectValue] = "{" ~> rep(member) <~ "}" ^^ (new ObjectValue(_))
+  def obj: Parser[ObjectValue] = "{" ~> rep(member ) <~ "}" ^^ (new ObjectValue(_))
+  //TRY IT WITH An optional comma because thats a common mistake def obj: Parser[ObjectValue] = "{" ~> rep(member <~ opt(",")) <~ "}" ^^ (new ObjectValue(_))
 
   def arr: Parser[ArrayValue] = "[" ~> repsep(value, ",") <~ "]" ^^ (new ArrayValue(_))
 

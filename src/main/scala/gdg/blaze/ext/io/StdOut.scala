@@ -3,7 +3,7 @@ package gdg.blaze.ext.io
 import gdg.blaze._
 import org.apache.spark.streaming.dstream.DStream
 
-class StdOut(config: PluginConfig) extends Output {
+class StdOut() extends Output {
   override def apply(dStream: DStream[Message]) = {
     dStream.foreachRDD { rdd =>
       println("RDD - >")
@@ -15,5 +15,5 @@ class StdOut(config: PluginConfig) extends Output {
 }
 
 object StdOut extends PluginFactory[StdOut] {
-  override def apply(config: PluginConfig, sc: BlazeContext): StdOut = new StdOut(config)
+  override def apply(config: PluginConfig, sc: BlazeContext): StdOut = new StdOut()
 }

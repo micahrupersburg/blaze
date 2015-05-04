@@ -26,7 +26,8 @@ class JSONCodec(config: PluginConfig = PluginConfig.empty, mapper: ObjectMapper 
 
 }
 
-object JSONCodec extends PluginFactory[JSONCodec] {
-  override def apply(config: PluginConfig, sc: BlazeContext): JSONCodec = new JSONCodec(config)
+object JSONCodec extends CodecFactory[JSONCodec] {
+
+  override def apply(config: PluginConfig): JSONCodec = new JSONCodec(config)
 }
 

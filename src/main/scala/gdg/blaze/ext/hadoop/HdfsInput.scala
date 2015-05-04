@@ -1,7 +1,7 @@
 package gdg.blaze.ext.hadoop
 
 import gdg.blaze._
-import gdg.blaze.codec.JSONCodec
+import gdg.blaze.codec.{PlainCodec, JSONCodec}
 import org.apache.hadoop.io.{LongWritable, Text}
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
@@ -20,20 +20,16 @@ import org.apache.spark.streaming.dstream.{DStream, InputDStream}
     type => ... # string (optional)
   format = (text, or binary, etc)
  */
-class HdfsInput(config: PluginConfig, bc: BlazeContext) extends Input {
+class HdfsInput(config: HdfsConfig, @transient bc: BlazeContext) extends Input {
 
   override def apply(): DStream[Message] = {
-    val format = config.getString("format").getOrElse("text")
-    val path = config.getString("path")
-    if(path.isEmpty) {
+    if(config.path.isEmpty) {
       throw new IllegalStateException("hdfs plugin requires path field")
     }
-    val codec = config.getCodec("codec")(bc).getOrElse(new JSONCodec())
-    val newFiles = config.getBool("new_files_only").getOrElse(false)
-    val mstream = format match {
-      case "text" =>text(path.get, newFiles = false)
+    val mstream = config.format match {
+      case "text" =>text(config.path, newFiles = config.new_files_only)
     }
-    mstream.flatMap { str => codec.decode(str)}
+    mstream.flatMap { str => config.codec.decode(str)}
   }
 
   def text(path: String, newFiles: Boolean): DStream[String] = {
@@ -42,7 +38,13 @@ class HdfsInput(config: PluginConfig, bc: BlazeContext) extends Input {
     stream.map(_._2.toString)
   }
 }
-
+case class HdfsConfig(
+                  format:String = "text",
+                  path:String,
+                  codec:Codec = PlainCodec.single,
+                  new_files_only:Boolean = false)
 object HdfsInput extends PluginFactory[HdfsInput] {
-  override def apply(config: PluginConfig, sc: BlazeContext) = new HdfsInput(config, sc)
+  override def apply(config: PluginConfig, bc: BlazeContext) = {
+    new HdfsInput(config.convert(classOf[HdfsConfig]), bc)
+  }
 }

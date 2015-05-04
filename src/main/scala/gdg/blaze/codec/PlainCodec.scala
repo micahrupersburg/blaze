@@ -7,7 +7,7 @@ class PlainCodec extends Codec {
   override def encode(message: Message): String = message.toString
 }
 
-object PlainCodec extends PluginFactory[PlainCodec] {
+object PlainCodec extends CodecFactory[PlainCodec] {
   val single = new PlainCodec()
-  override def apply(config: PluginConfig, sc: BlazeContext): PlainCodec = single
+  override def apply(config: PluginConfig): PlainCodec = single
 }

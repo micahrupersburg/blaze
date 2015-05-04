@@ -34,6 +34,11 @@
 			<!--<version>${spark.version}</version>-->
 		<!--</dependency>-->
 		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-scala_2.11</artifactId>
+			<version>2.5.2</version>
+		</dependency>
+		<dependency>
 			<groupId>gdg.feed</groupId>
 			<artifactId>feed-client</artifactId>
 			<version>1.2-SNAPSHOT</version>
@@ -47,6 +52,11 @@
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>elasticsearch</artifactId>
 			<version>1.4.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>6.8.8</version>
 		</dependency>
 		<dependency>
 			<groupId>com.101tec</groupId>
@@ -78,6 +88,11 @@
 			<groupId>io.thekraken</groupId>
 			<artifactId>grok</artifactId>
 			<version>0.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.maxmind.geoip2</groupId>
+			<artifactId>geoip2</artifactId>
+			<version>2.2.0</version>
 		</dependency>
 	</dependencies>
 

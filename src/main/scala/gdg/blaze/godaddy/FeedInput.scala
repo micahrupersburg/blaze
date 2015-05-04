@@ -10,13 +10,12 @@ import gdg.feed.proto.gen.Feed.ServiceHeader.Subscribe.StartingPoint.Edge
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.dstream.DStream
 
-class FeedInput(pc: PluginConfig, bc: BlazeContext) extends Input {
+class FeedInput(pc: FeedInputConfig, bc: BlazeContext) extends Input {
   override def apply(): DStream[Message] = {
-    val feed = pc.getString("feed")
     val spec = FeedSpec.builder()
       .`type`(Envelope.getDefaultInstance).websocket()
       .sub()
-      .feed(feed.get)
+      .feed(pc.feed)
       .start(Edge.LATEST, Offsets.getDefaultInstance)
       .protobuf()
       .location(HostAndPort.fromParts("feed-http.databus.prod.int.godaddy.com", 443))
@@ -25,7 +24,7 @@ class FeedInput(pc: PluginConfig, bc: BlazeContext) extends Input {
   }
 }
 
-
+case class FeedInputConfig(feed:String)
 object FeedInput extends PluginFactory[FeedInput] {
-  override def apply(pc: PluginConfig, bc: BlazeContext): FeedInput = new FeedInput(pc, bc)
+  override def apply(pc: PluginConfig, bc: BlazeContext): FeedInput = new FeedInput(pc.convert(classOf[FeedInputConfig]), bc)
 }

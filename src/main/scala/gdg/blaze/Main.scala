@@ -7,7 +7,7 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 import scala.io.Source
 
-object BlazeOfGlory {
+object Main {
   type MStream = DStream[Message]
   val registry = Registry
 
@@ -16,22 +16,26 @@ object BlazeOfGlory {
   }
 
   def main(args: Array[String]): Unit = {
-    val sc = run("/demo.conf").sc
-    sc.start()
-    sc.awaitTermination()
+    args.foreach { file =>
+      val sc = run(file).sc
+      sc.start()
+      sc.awaitTermination()
+    }
   }
 
   def run(file: String): BlazeContext = {
     val conf: SparkConf = new SparkConf().setAppName("Hadoop DB TX Loader").setMaster("local[4]")
-    val bc = new BlazeContext(new StreamingContext(conf, Seconds(5)))
+
     println(s"Loading : $file")
     val exp = loadFile(file)
-      .replaceAll("#.*\n", "")
     val parseResult = new ConfigParser().config(exp)
     if(!parseResult.successful) {
       throw new IllegalStateException(parseResult.toString)
     }
     val parsed = parseResult.get
+    println(parsed)
+    val bc = new BlazeContext(new StreamingContext(conf, Seconds(5)))
+
     val outputs = parsed.output.map { case b: NamedObjectValue => Registry.output(b, bc) }
     val inputs = parsed.input.map { case b: NamedObjectValue => Registry.input(b, bc) }
     val filters = parsed.filter.map { case b: NamedObjectValue => Registry.filter(b, bc) }

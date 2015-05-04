@@ -4,7 +4,7 @@ import gdg.blaze.codec.{PlainCodec, JSONCodec}
 import gdg.blaze.ext.es.ElasticSearchOutput
 import gdg.blaze.ext.hadoop.HdfsInput
 import gdg.blaze.ext.io.{StdIn, TCPInput, StdOut}
-import gdg.blaze.ext.GrokFilter
+import gdg.blaze.ext.{GeoIpFilter, GrokFilter}
 import gdg.blaze.ext.kafka.KafkaInput
 import gdg.blaze.godaddy.FeedInput
 
@@ -22,9 +22,10 @@ object Registry {
     "stdout" -> StdOut
   )
   private val filters: Map[String, PluginFactory[_ <: Filter]] = Map(
-    "grok" -> GrokFilter
+    "grok" -> GrokFilter,
+    "geoip" -> GeoIpFilter
   )
-  private val codecs: Map[String, PluginFactory[_ <: Codec]] = Map(
+  private val codecs: Map[String, CodecFactory[_ <: Codec]] = Map(
     "json" -> JSONCodec,
     "plain" -> PlainCodec
   )
@@ -41,8 +42,12 @@ object Registry {
     filters.get(value.name).map(_(PluginConfig(value.value), bc)).getOrElse(throw new IllegalStateException(s"Missing Value ${value.name}"))
   }
 
-  def codec(value: NamedObjectValue, bc: BlazeContext) = {
-    codecs.get(value.name).map(_(PluginConfig(value.value), bc)).getOrElse(throw new IllegalStateException(s"Missing Value ${value.name}"))
+  def codec(name: String, pluginConfig: PluginConfig): Codec = {
+    codecs.get(name).getOrElse(throw new IllegalStateException(s"Missing Value ${name}"))(pluginConfig)
+  }
+
+  def codec(value: NamedObjectValue) = {
+    codecs.get(value.name).map(_(PluginConfig(value.value))).getOrElse(throw new IllegalStateException(s"Missing Value ${value.name}"))
   }
 
 }
